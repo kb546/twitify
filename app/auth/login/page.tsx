@@ -41,8 +41,12 @@ function LoginForm() {
       setLoading(true);
       setError(null);
       
-      const redirectTo = `${window.location.origin}/auth/callback`;
+      // Use NEXT_PUBLIC_APP_URL if set, otherwise fall back to current origin
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, "");
+      const redirectTo = `${appUrl}/auth/callback`;
       console.log("[Login] Initiating OAuth with redirectTo:", redirectTo);
+      console.log("[Login] NEXT_PUBLIC_APP_URL:", process.env.NEXT_PUBLIC_APP_URL);
+      console.log("[Login] window.location.origin:", window.location.origin);
       
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "twitter",
@@ -94,10 +98,12 @@ function LoginForm() {
           >
             {loading ? "Connecting..." : "Sign in with Twitter"}
           </Button>
-          {process.env.NODE_ENV === 'development' && (
+          {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_APP_URL) && (
             <div className="mt-4 p-3 bg-gray-50 rounded-md text-xs text-gray-600">
               <p><strong>Debug Info:</strong></p>
-              <p>App URL: {typeof window !== 'undefined' ? window.location.origin : 'N/A'}</p>
+              <p>NEXT_PUBLIC_APP_URL: {process.env.NEXT_PUBLIC_APP_URL || 'Not set'}</p>
+              <p>Current Origin: {typeof window !== 'undefined' ? window.location.origin : 'N/A'}</p>
+              <p>Will use: {(process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'N/A')).replace(/\/$/, "")}</p>
               <p>Supabase: {supabase ? 'Connected' : 'Not connected'}</p>
             </div>
           )}
