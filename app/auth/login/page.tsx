@@ -10,6 +10,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [supabase, setSupabase] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPreviewDomain, setIsPreviewDomain] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -19,8 +20,18 @@ function LoginForm() {
       setError(decodeURIComponent(errorParam));
     }
 
-    // Only create client on client side after mount
+    // Detect if accessed via preview domain
     if (typeof window !== 'undefined') {
+      const currentOrigin = window.location.origin;
+      const isPreview = currentOrigin.includes("vercel.app") && !currentOrigin.includes("twitify.tech");
+      setIsPreviewDomain(isPreview);
+      
+      if (isPreview) {
+        console.warn("[Login] Accessed via preview domain:", currentOrigin);
+        console.warn("[Login] OAuth will use production domain:", process.env.NEXT_PUBLIC_APP_URL || "https://twitify.tech");
+      }
+
+      // Only create client on client side after mount
       try {
         const client = createClient();
         setSupabase(client);
@@ -73,10 +84,19 @@ function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {isPreviewDomain && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800 font-medium">⚠️ Preview Domain Detected</p>
+              <p className="text-sm text-yellow-700 mt-1">
+                You're accessing via a preview URL. For OAuth to work correctly, please use{" "}
+                <a href="https://twitify.tech/auth/login" className="underline font-medium">https://twitify.tech/auth/login</a>
+              </p>
+            </div>
+          )}
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-800 font-medium">Error</p>
-              <p className="text-sm text-red-600 mt-1">{error}</p>
+              <p className="text-sm text-red-600 mt-1 whitespace-pre-wrap break-words">{error}</p>
             </div>
           )}
           <Button
