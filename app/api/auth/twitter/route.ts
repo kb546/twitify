@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     // Try "twitter" first, then fallback to "x" if it fails (for OAuth 2.0)
     console.log("[OAuth Init] Calling Supabase signInWithOAuth with redirectTo:", redirectTo);
     
-    let providerName = "twitter";
+    let providerName: "twitter" | "x" = "twitter";
     let data: any = null;
     let error: any = null;
     
