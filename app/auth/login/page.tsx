@@ -1,15 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+  const [supabase, setSupabase] = useState<any>(null);
+
+  useEffect(() => {
+    // Only create client on client side after mount
+    if (typeof window !== 'undefined') {
+      try {
+        setSupabase(createClient());
+      } catch (error) {
+        console.error("Failed to initialize Supabase client:", error);
+      }
+    }
+  }, []);
 
   const handleTwitterLogin = async () => {
+    if (!supabase) {
+      alert("Authentication service is not available. Please check your configuration.");
+      return;
+    }
+    
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithOAuth({

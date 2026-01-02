@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { markNotificationAsRead } from "@/lib/notifications/in-app";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { createClient } = await import("@/lib/supabase/server");
