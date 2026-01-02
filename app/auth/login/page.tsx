@@ -88,7 +88,7 @@ function LoginForm() {
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md">
               <p className="text-sm text-yellow-800 font-medium">⚠️ Preview Domain Detected</p>
               <p className="text-sm text-yellow-700 mt-1">
-                You're accessing via a preview URL. For OAuth to work correctly, please use{" "}
+                You&apos;re accessing via a preview URL. For OAuth to work correctly, please use{" "}
                 <a href="https://twitify.tech/auth/login" className="underline font-medium">https://twitify.tech/auth/login</a>
               </p>
             </div>
