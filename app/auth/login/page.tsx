@@ -32,40 +32,29 @@ function LoginForm() {
   }, [searchParams]);
 
   const handleTwitterLogin = async () => {
-    if (!supabase) {
-      setError("Authentication service is not available. Please check your configuration.");
-      return;
-    }
-    
     try {
       setLoading(true);
       setError(null);
       
-      // Use NEXT_PUBLIC_APP_URL if set, otherwise fall back to current origin
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, "");
-      const redirectTo = `${appUrl}/auth/callback`;
-      console.log("[Login] Initiating OAuth with redirectTo:", redirectTo);
-      console.log("[Login] NEXT_PUBLIC_APP_URL:", process.env.NEXT_PUBLIC_APP_URL);
-      console.log("[Login] window.location.origin:", window.location.origin);
+      // Use the API route instead of calling Supabase directly
+      // This ensures NEXT_PUBLIC_APP_URL is used correctly (server-side)
+      console.log("[Login] Initiating OAuth via API route");
       
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "twitter",
-        options: {
-          redirectTo,
-        },
+      const response = await fetch('/api/auth/twitter', {
+        method: 'GET',
+        redirect: 'follow', // Follow redirects
       });
 
-      if (oauthError) {
-        console.error("[Login] OAuth error:", oauthError);
-        throw oauthError;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      if (!data?.url) {
-        throw new Error("No OAuth URL returned. Please check Supabase Twitter provider configuration.");
-      }
-
-      // Redirect will happen automatically via data.url
-      console.log("[Login] Redirecting to OAuth URL");
+      // The API route will redirect to Supabase OAuth, which will then redirect to Twitter
+      // If we get here, something went wrong (should have redirected)
+      const text = await response.text();
+      console.error("[Login] Unexpected response:", text);
+      throw new Error("Failed to initiate OAuth flow. Please check your configuration.");
     } catch (error: any) {
       console.error("[Login] Error signing in:", error);
       const errorMessage = error?.message || "Failed to sign in with Twitter";
