@@ -5,16 +5,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // This route is for initiating Twitter OAuth
-  // The actual OAuth flow is handled by Supabase
+  // This route initiates Twitter OAuth - users don't need to be authenticated yet
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "twitter",
     options: {
@@ -23,7 +15,12 @@ export async function GET(request: NextRequest) {
   });
 
   if (error) {
+    console.error("OAuth error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!data?.url) {
+    return NextResponse.json({ error: "Failed to generate OAuth URL" }, { status: 500 });
   }
 
   return NextResponse.redirect(data.url);
