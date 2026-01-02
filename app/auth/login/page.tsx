@@ -47,28 +47,21 @@ function LoginForm() {
       setLoading(true);
       setError(null);
       
-      // Use the API route instead of calling Supabase directly
-      // This ensures NEXT_PUBLIC_APP_URL is used correctly (server-side)
-      console.log("[Login] Initiating OAuth via API route");
+      // Use direct navigation instead of fetch() for OAuth initiation
+      // This ensures redirects work properly and errors are visible in URL params
+      console.log("[Login] Initiating OAuth via direct navigation to API route");
       
-      const response = await fetch('/api/auth/twitter', {
-        method: 'GET',
-        redirect: 'follow', // Follow redirects
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      // The API route will redirect to Supabase OAuth, which will then redirect to Twitter
-      // If we get here, something went wrong (should have redirected)
-      const text = await response.text();
-      console.error("[Login] Unexpected response:", text);
-      throw new Error("Failed to initiate OAuth flow. Please check your configuration.");
+      // Direct navigation to API route - it will handle redirects properly
+      // If there's an error, API route will redirect back with error in URL params
+      window.location.href = '/api/auth/twitter';
+      
+      // Note: We don't need to handle the response here because:
+      // 1. On success: API route redirects to Supabase OAuth → Twitter
+      // 2. On error: API route redirects back to /auth/login?error=...
+      // The error will be picked up by useEffect when page loads
     } catch (error: any) {
-      console.error("[Login] Error signing in:", error);
-      const errorMessage = error?.message || "Failed to sign in with Twitter";
+      console.error("[Login] Error initiating OAuth:", error);
+      const errorMessage = error?.message || "Failed to initiate OAuth flow";
       setError(`Authentication Error: ${errorMessage}. Please check your configuration and try again.`);
       setLoading(false);
     }
