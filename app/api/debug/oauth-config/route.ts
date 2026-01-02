@@ -68,30 +68,64 @@ export async function GET(request: NextRequest) {
             };
             
             // Parse error to provide recommendations
-            if (testResult.error.message?.includes("provider is not enabled")) {
-              diagnostics.recommendations.push("Twitter provider is not enabled in Supabase");
-              diagnostics.recommendations.push("Check: Auth → Providers → X / Twitter (OAuth 2.0) is enabled");
-              diagnostics.recommendations.push("Verify Client ID and Secret are saved (not just filled, but saved)");
+            if (testResult.error.message?.includes("provider is not enabled") || 
+                testResult.error.message?.includes("Unsupported provider") ||
+                testResult.error.status === 400) {
+              diagnostics.recommendations.push("🔴 CRITICAL: Twitter provider is not properly enabled");
+              diagnostics.recommendations.push("🔴 Action: Go to Supabase → Auth → Providers → X / Twitter (OAuth 2.0)");
+              diagnostics.recommendations.push("🔴 Action: Toggle OFF, wait 5s, toggle ON");
+              diagnostics.recommendations.push("🔴 Action: DELETE and re-enter Client ID: cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ");
+              diagnostics.recommendations.push("🔴 Action: DELETE and re-enter Client Secret: HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz");
+              diagnostics.recommendations.push("🔴 Action: Click 'Save', wait 60 seconds, refresh page to verify");
+              diagnostics.recommendations.push("🔴 Action: Verify 'Twitter (Deprecated)' is DISABLED");
             }
             if (testResult.error.message?.includes("redirect")) {
-              diagnostics.recommendations.push(`Redirect URL "${redirectUrl}" is not whitelisted in Supabase`);
-              diagnostics.recommendations.push("Check: Auth → URL Configuration → Redirect URLs");
+              diagnostics.recommendations.push(`🔴 Redirect URL "${redirectUrl}" is not whitelisted`);
+              diagnostics.recommendations.push("🔴 Action: Go to Auth → URL Configuration → Add redirect URL");
             }
-            if (testResult.error.status === 400) {
-              diagnostics.recommendations.push("Site URL might not be configured in Supabase");
-              diagnostics.recommendations.push("Check: Auth → URL Configuration → Site URL should be: " + appUrl);
+            if (testResult.error.status === 400 && !testResult.error.message?.includes("provider")) {
+              diagnostics.recommendations.push("🔴 Site URL might not be configured");
+              diagnostics.recommendations.push(`🔴 Action: Set Site URL to: ${appUrl}`);
             }
           } else if (testResult.data?.url) {
+            // Even if we get a URL, we should validate it
+            try {
+              const urlObj = new URL(testResult.data.url);
+              if (urlObj.hostname.includes("supabase.co")) {
+                diagnostics.oauth.providerTest = {
+                  success: true,
+                  message: "OAuth provider is configured correctly",
+                  oauthUrl: testResult.data.url.substring(0, 100) + "...",
+                };
+              } else {
+                diagnostics.oauth.providerTest = {
+                  success: false,
+                  error: "Invalid OAuth URL returned",
+                  oauthUrl: testResult.data.url,
+                };
+                diagnostics.recommendations.push("🔴 Invalid OAuth URL returned - provider may not be properly configured");
+              }
+            } catch (urlError) {
+              diagnostics.oauth.providerTest = {
+                success: false,
+                error: "Invalid OAuth URL format",
+                oauthUrl: testResult.data.url,
+              };
+              diagnostics.recommendations.push("🔴 Invalid OAuth URL format - check provider configuration");
+            }
+          } else {
             diagnostics.oauth.providerTest = {
-              success: true,
-              message: "OAuth provider is configured correctly",
+              success: false,
+              error: "No OAuth URL returned",
             };
+            diagnostics.recommendations.push("🔴 No OAuth URL returned - provider is not enabled or misconfigured");
           }
         } catch (testError: any) {
           diagnostics.oauth.providerTest = {
             success: false,
             error: testError.message,
           };
+          diagnostics.recommendations.push("🔴 OAuth test failed: " + testError.message);
         }
       }
     } catch (error: any) {

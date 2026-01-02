@@ -78,47 +78,29 @@ export async function GET(request: NextRequest) {
     console.log("[OAuth Init] ============================");
 
     // This route initiates Twitter OAuth - users don't need to be authenticated yet
-    // Try "twitter" first, then fallback to "x" if it fails (for OAuth 2.0)
+    // CRITICAL: For OAuth 2.0, Supabase uses "twitter" as provider name, but we need to ensure
+    // the correct provider is enabled (X / Twitter OAuth 2.0, NOT deprecated)
     console.log("[OAuth Init] Calling Supabase signInWithOAuth with redirectTo:", redirectTo);
     
-    let providerName: "twitter" | "x" = "twitter";
-    let data: any = null;
-    let error: any = null;
-    
-    // Try with "twitter" provider first
+    // Try "twitter" provider (this is the correct name for OAuth 2.0 in Supabase)
+    // Note: Even though it's called "X / Twitter (OAuth 2.0)" in UI, the provider name is still "twitter"
     const result = await supabase.auth.signInWithOAuth({
-      provider: providerName,
+      provider: "twitter",
       options: {
         redirectTo,
+        queryParams: {
+          // Force OAuth 2.0 flow
+          response_type: "code",
+        },
       },
     });
     
-    data = result.data;
-    error = result.error;
-    
-    // If "twitter" fails with provider error, try "x" (OAuth 2.0 might use different name)
-    if (error && (error.message?.includes("provider") || error.status === 400)) {
-      console.warn("[OAuth Init] Provider 'twitter' failed, trying 'x' instead");
-      providerName = "x";
-      
-      const retryResult = await supabase.auth.signInWithOAuth({
-        provider: providerName,
-        options: {
-          redirectTo,
-        },
-      });
-      
-      data = retryResult.data;
-      error = retryResult.error;
-      
-      if (!error) {
-        console.log("[OAuth Init] Success with provider 'x'");
-      }
-    }
+    const data = result.data;
+    const error = result.error;
 
     if (error) {
       console.error("[OAuth Init] ===== Supabase OAuth Error =====");
-      console.error("[OAuth Init] Provider Tried:", providerName);
+      console.error("[OAuth Init] Provider Tried: twitter");
       console.error("[OAuth Init] Error Message:", error.message);
       console.error("[OAuth Init] Error Status:", error.status);
       console.error("[OAuth Init] Error Name:", error.name);
@@ -127,40 +109,41 @@ export async function GET(request: NextRequest) {
       console.error("[OAuth Init] Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 50));
       console.error("[OAuth Init] =================================");
       
-      // Categorize error type
-      let errorCategory = "unknown";
+      // CRITICAL FIX: The error happens when Supabase validates the provider at /auth/v1/authorize
+      // This means the provider might be enabled in UI but credentials are invalid or not saved
       let errorMessage = error.message || "Unknown error";
       const fixSteps: string[] = [];
       
       if (error.message?.includes("provider is not enabled") || 
           error.message?.includes("Unsupported provider") ||
-          (error.status === 400 && error.message?.includes("provider"))) {
-        errorCategory = "provider_not_enabled";
-        errorMessage = `Twitter provider is not enabled in Supabase.`;
-        fixSteps.push(`1. Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/providers`);
-        fixSteps.push(`2. Click "X / Twitter (OAuth 2.0)" (NOT "Twitter (Deprecated)")`);
-        fixSteps.push(`3. Toggle it ON (should show green "Enabled")`);
-        fixSteps.push(`4. Enter Client ID: cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ`);
-        fixSteps.push(`5. Enter Client Secret: HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz`);
-        fixSteps.push(`6. Click "Save" and wait 60 seconds`);
-        fixSteps.push(`7. Make sure "Twitter (Deprecated)" is DISABLED`);
-      } else if (error.message?.includes("redirect") || error.status === 400) {
-        errorCategory = "redirect_url_error";
+          (error.status === 400)) {
+        // This is the most common issue - provider appears enabled but isn't actually working
+        errorMessage = `CRITICAL: Twitter provider is not properly enabled in Supabase.`;
+        fixSteps.push(`🔴 STEP 1: Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/providers`);
+        fixSteps.push(`🔴 STEP 2: Find "X / Twitter (OAuth 2.0)" (NOT "Twitter (Deprecated)")`);
+        fixSteps.push(`🔴 STEP 3: Click on it to open settings`);
+        fixSteps.push(`🔴 STEP 4: Toggle OFF, wait 5 seconds, then toggle ON`);
+        fixSteps.push(`🔴 STEP 5: DELETE all text in Client ID field`);
+        fixSteps.push(`🔴 STEP 6: Type exactly: cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ`);
+        fixSteps.push(`🔴 STEP 7: DELETE all text in Client Secret field (click eye icon first)`);
+        fixSteps.push(`🔴 STEP 8: Type exactly: HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz`);
+        fixSteps.push(`🔴 STEP 9: Click "Save" button at bottom`);
+        fixSteps.push(`🔴 STEP 10: Wait 60 seconds, then refresh the page`);
+        fixSteps.push(`🔴 STEP 11: Verify values are still there after refresh`);
+        fixSteps.push(`🔴 STEP 12: Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/url-configuration`);
+        fixSteps.push(`🔴 STEP 13: Set Site URL to: ${cleanAppUrl}`);
+        fixSteps.push(`🔴 STEP 14: Add Redirect URL: ${redirectTo}`);
+        fixSteps.push(`🔴 STEP 15: Click "Save" and wait 60 seconds`);
+        fixSteps.push(`🔴 STEP 16: Make sure "Twitter (Deprecated)" is DISABLED`);
+      } else if (error.message?.includes("redirect")) {
         errorMessage = `Redirect URL "${redirectTo}" is not whitelisted or Site URL not configured.`;
         fixSteps.push(`1. Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/url-configuration`);
         fixSteps.push(`2. Set Site URL to: ${cleanAppUrl}`);
         fixSteps.push(`3. Add Redirect URL: ${redirectTo}`);
         fixSteps.push(`4. Click "Save" and wait 60 seconds`);
-      } else if (error.status === 400) {
-        errorCategory = "configuration_error";
-        errorMessage = `OAuth configuration error (HTTP 400).`;
-        fixSteps.push(`1. Check diagnostic endpoint: ${cleanAppUrl}/api/debug/oauth-config`);
-        fixSteps.push(`2. Verify "X / Twitter (OAuth 2.0)" is enabled in Supabase`);
-        fixSteps.push(`3. Verify Site URL is set to: ${cleanAppUrl}`);
-        fixSteps.push(`4. Verify Redirect URL "${redirectTo}" is whitelisted`);
       }
       
-      const fullErrorMessage = `${errorMessage}\n\nFix Steps:\n${fixSteps.join('\n')}\n\nFor diagnostics, visit: ${cleanAppUrl}/api/debug/oauth-config`;
+      const fullErrorMessage = `${errorMessage}\n\n${fixSteps.join('\n')}\n\n💡 TIP: After saving, wait 60 seconds before testing again. Supabase needs time to propagate changes.\n\n🔍 Check diagnostics: ${cleanAppUrl}/api/debug/oauth-config`;
       
       // Ensure error message is properly encoded
       const encodedError = encodeURIComponent(fullErrorMessage);
@@ -176,17 +159,36 @@ export async function GET(request: NextRequest) {
 
     if (!data?.url) {
       console.error("[OAuth Init] No OAuth URL returned from Supabase");
-      console.error("[OAuth Init] Provider Used:", providerName);
+      console.error("[OAuth Init] Provider Used: twitter");
       console.error("[OAuth Init] Redirect URL:", redirectTo);
       console.error("[OAuth Init] This usually means:");
       console.error("[OAuth Init] 1. Twitter provider is not enabled in Supabase");
       console.error("[OAuth Init] 2. Wrong provider is enabled (deprecated instead of OAuth 2.0)");
       console.error("[OAuth Init] 3. Redirect URL is not whitelisted:", redirectTo);
       console.error("[OAuth Init] 4. Site URL is not configured in Supabase");
-      console.error("[OAuth Init] 5. Provider name mismatch (tried:", providerName, ")");
+      console.error("[OAuth Init] 5. Credentials are not saved properly");
       
-      const errorMsg = `Failed to generate OAuth URL. Please verify: 1) "X / Twitter (OAuth 2.0)" is enabled in Supabase (not deprecated), 2) Redirect URL "${redirectTo}" is added to allowed redirect URLs, 3) Site URL is configured in Supabase (Auth → URL Configuration → Site URL should be "${cleanAppUrl}").`;
+      const errorMsg = `CRITICAL: Failed to generate OAuth URL. This means Supabase rejected the request before even creating the authorization URL.\n\n🔴 IMMEDIATE FIX:\n1. Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/providers\n2. Click "X / Twitter (OAuth 2.0)"\n3. Toggle OFF, wait 5s, toggle ON\n4. Re-enter Client ID: cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ\n5. Re-enter Client Secret: HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz\n6. Click "Save"\n7. Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/url-configuration\n8. Set Site URL to: ${cleanAppUrl}\n9. Add Redirect URL: ${redirectTo}\n10. Wait 60 seconds before testing`;
       
+      return NextResponse.redirect(
+        new URL(
+          `/auth/login?error=${encodeURIComponent(errorMsg)}`,
+          cleanAppUrl
+        )
+      );
+    }
+    
+    // CRITICAL: Validate the URL before redirecting
+    // If Supabase returns a URL but it's invalid, we'll catch it here
+    try {
+      const urlObj = new URL(data.url);
+      if (!urlObj.hostname.includes("supabase.co")) {
+        throw new Error("Invalid OAuth URL returned");
+      }
+      console.log("[OAuth Init] OAuth URL validated successfully");
+    } catch (urlError: any) {
+      console.error("[OAuth Init] Invalid OAuth URL returned:", data.url);
+      const errorMsg = `CRITICAL: Supabase returned an invalid OAuth URL. This usually means:\n1. Provider credentials are invalid\n2. Provider is not properly enabled\n3. Site URL or Redirect URL mismatch\n\n🔴 FIX: Follow the steps in the error message above.`;
       return NextResponse.redirect(
         new URL(
           `/auth/login?error=${encodeURIComponent(errorMsg)}`,
