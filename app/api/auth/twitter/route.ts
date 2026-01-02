@@ -185,10 +185,73 @@ export async function GET(request: NextRequest) {
       if (!urlObj.hostname.includes("supabase.co")) {
         throw new Error("Invalid OAuth URL returned");
       }
-      console.log("[OAuth Init] OAuth URL validated successfully");
+      
+      // CRITICAL: Test the authorize URL to ensure backend recognizes provider
+      // This catches UI vs backend mismatch where UI shows enabled but backend doesn't
+      console.log("[OAuth Init] Testing authorize URL to verify backend recognizes provider");
+      try {
+        const testResponse = await fetch(data.url, {
+          method: "HEAD",
+          redirect: "manual",
+        });
+        
+        const status = testResponse.status;
+        
+        if (status >= 400) {
+          // Backend rejected the request - get error details
+          try {
+            const errorResponse = await fetch(data.url, {
+              method: "GET",
+              redirect: "manual",
+            });
+            const errorText = await errorResponse.text();
+            
+            try {
+              const errorJson = JSON.parse(errorText);
+              if (errorJson.error_code === "validation_failed" || errorJson.msg?.includes("provider is not enabled")) {
+                console.error("[OAuth Init] CRITICAL: Backend says provider is not enabled (UI vs backend mismatch)");
+                console.error("[OAuth Init] Error from backend:", errorJson);
+                
+                const errorMsg = `CRITICAL: Supabase UI shows provider enabled but backend doesn't recognize it.\n\n🔴 NUCLEAR FIX REQUIRED:\n1. Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/providers\n2. Toggle "X / Twitter (OAuth 2.0)" OFF\n3. Wait 60 seconds\n4. Clear browser cache for Supabase dashboard\n5. Toggle "X / Twitter (OAuth 2.0)" ON\n6. Re-enter Client ID: cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ\n7. Re-enter Client Secret: HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz\n8. Click "Save"\n9. Wait 120 seconds (longer than usual)\n10. Test again\n\n🔍 For detailed diagnostics, visit: ${cleanAppUrl}/api/debug/test-authorize`;
+                
+                return NextResponse.redirect(
+                  new URL(
+                    `/auth/login?error=${encodeURIComponent(errorMsg)}`,
+                    cleanAppUrl
+                  )
+                );
+              }
+            } catch {
+              // Not JSON, log the text
+              console.error("[OAuth Init] Backend error response:", errorText.substring(0, 200));
+            }
+          } catch (fetchError: any) {
+            console.error("[OAuth Init] Failed to get error details:", fetchError.message);
+          }
+          
+          // Generic error for backend rejection
+          const errorMsg = `CRITICAL: Supabase backend rejected the OAuth request (status ${status}).\n\nThis usually means:\n1. Provider is not enabled in backend (UI vs backend mismatch)\n2. Credentials are invalid\n3. Site URL or Redirect URL mismatch\n\n🔴 Visit ${cleanAppUrl}/api/debug/test-authorize for detailed diagnostics`;
+          return NextResponse.redirect(
+            new URL(
+              `/auth/login?error=${encodeURIComponent(errorMsg)}`,
+              cleanAppUrl
+            )
+          );
+        } else if (status >= 300 && status < 400) {
+          // Redirect means it's working
+          const location = testResponse.headers.get("location");
+          console.log("[OAuth Init] Authorize URL test passed - redirects to:", location?.substring(0, 100));
+        }
+        
+        console.log("[OAuth Init] OAuth URL validated successfully - backend recognizes provider");
+      } catch (testError: any) {
+        // If test fails, log but don't block - might be network issue
+        console.warn("[OAuth Init] Could not test authorize URL:", testError.message);
+        console.log("[OAuth Init] Proceeding with redirect (test failed but URL format is valid)");
+      }
     } catch (urlError: any) {
       console.error("[OAuth Init] Invalid OAuth URL returned:", data.url);
-      const errorMsg = `CRITICAL: Supabase returned an invalid OAuth URL. This usually means:\n1. Provider credentials are invalid\n2. Provider is not properly enabled\n3. Site URL or Redirect URL mismatch\n\n🔴 FIX: Follow the steps in the error message above.`;
+      const errorMsg = `CRITICAL: Supabase returned an invalid OAuth URL. This usually means:\n1. Provider credentials are invalid\n2. Provider is not properly enabled\n3. Site URL or Redirect URL mismatch\n\n🔴 FIX: Follow the steps in the error message above.\n🔍 Visit ${cleanAppUrl}/api/debug/test-authorize for diagnostics`;
       return NextResponse.redirect(
         new URL(
           `/auth/login?error=${encodeURIComponent(errorMsg)}`,

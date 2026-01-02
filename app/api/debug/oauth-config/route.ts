@@ -92,11 +92,97 @@ export async function GET(request: NextRequest) {
             try {
               const urlObj = new URL(testResult.data.url);
               if (urlObj.hostname.includes("supabase.co")) {
-                diagnostics.oauth.providerTest = {
-                  success: true,
-                  message: "OAuth provider is configured correctly",
-                  oauthUrl: testResult.data.url.substring(0, 100) + "...",
-                };
+                // CRITICAL: Test the actual authorize URL to see if backend recognizes provider
+                try {
+                  const authorizeTest = await fetch(testResult.data.url, {
+                    method: "HEAD",
+                    redirect: "manual",
+                  });
+
+                  const status = authorizeTest.status;
+                  
+                  if (status >= 400) {
+                    // Get error details
+                    try {
+                      const errorResponse = await fetch(testResult.data.url, {
+                        method: "GET",
+                        redirect: "manual",
+                      });
+                      const errorText = await errorResponse.text();
+                      
+                      try {
+                        const errorJson = JSON.parse(errorText);
+                        if (errorJson.error_code === "validation_failed" || errorJson.msg?.includes("provider is not enabled")) {
+                          diagnostics.oauth.providerTest = {
+                            success: false,
+                            error: "Provider not enabled in backend (UI vs backend mismatch)",
+                            oauthUrl: testResult.data.url.substring(0, 100) + "...",
+                            backendError: errorJson,
+                          };
+                          diagnostics.recommendations.push("🔴 CRITICAL: OAuth URL generated but backend rejects it");
+                          diagnostics.recommendations.push("🔴 This indicates UI shows provider enabled but backend doesn't recognize it");
+                          diagnostics.recommendations.push("🔴 Visit /api/debug/test-authorize for detailed test");
+                          diagnostics.recommendations.push("🔴 NUCLEAR FIX: Disable provider, wait 60s, re-enable, re-enter credentials, wait 120s");
+                        } else {
+                          diagnostics.oauth.providerTest = {
+                            success: false,
+                            error: "Backend validation failed",
+                            oauthUrl: testResult.data.url.substring(0, 100) + "...",
+                            backendError: errorJson,
+                          };
+                          diagnostics.recommendations.push("🔴 Backend rejected authorize request: " + (errorJson.msg || errorJson.error_code));
+                        }
+                      } catch {
+                        diagnostics.oauth.providerTest = {
+                          success: false,
+                          error: "Backend returned error",
+                          oauthUrl: testResult.data.url.substring(0, 100) + "...",
+                          backendErrorText: errorText.substring(0, 200),
+                        };
+                        diagnostics.recommendations.push("🔴 Backend returned error (status " + status + ")");
+                      }
+                    } catch {
+                      diagnostics.oauth.providerTest = {
+                        success: false,
+                        error: "Failed to get error details",
+                        status,
+                      };
+                    }
+                  } else if (status >= 300 && status < 400) {
+                    // Redirect means it's working
+                    const location = authorizeTest.headers.get("location");
+                    if (location && (location.includes("twitter.com") || location.includes("x.com"))) {
+                      diagnostics.oauth.providerTest = {
+                        success: true,
+                        message: "OAuth provider is configured correctly and backend recognizes it",
+                        oauthUrl: testResult.data.url.substring(0, 100) + "...",
+                        redirectsTo: location.substring(0, 100) + "...",
+                      };
+                    } else {
+                      diagnostics.oauth.providerTest = {
+                        success: true,
+                        message: "OAuth URL generated and backend accepts it",
+                        oauthUrl: testResult.data.url.substring(0, 100) + "...",
+                        redirectsTo: location ? location.substring(0, 100) + "..." : "unknown",
+                      };
+                    }
+                  } else {
+                    diagnostics.oauth.providerTest = {
+                      success: true,
+                      message: "OAuth provider is configured correctly",
+                      oauthUrl: testResult.data.url.substring(0, 100) + "...",
+                    };
+                  }
+                } catch (testError: any) {
+                  // If test fails, still report URL was generated
+                  diagnostics.oauth.providerTest = {
+                    success: true,
+                    message: "OAuth URL generated (backend test failed: " + testError.message + ")",
+                    oauthUrl: testResult.data.url.substring(0, 100) + "...",
+                    testError: testError.message,
+                  };
+                  diagnostics.recommendations.push("⚠️ OAuth URL generated but couldn't test backend - visit /api/debug/test-authorize");
+                }
               } else {
                 diagnostics.oauth.providerTest = {
                   success: false,
