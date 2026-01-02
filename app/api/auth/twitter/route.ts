@@ -38,17 +38,44 @@ export async function GET(request: NextRequest) {
       console.warn("[OAuth Init] WARNING: Accessed via preview domain. OAuth will redirect to production domain:", cleanAppUrl);
     }
 
+    // Pre-flight checks
+    console.log("[OAuth Init] ===== Pre-Flight Checks =====");
+    console.log("[OAuth Init] Supabase URL configured:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log("[OAuth Init] Supabase Anon Key configured:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    console.log("[OAuth Init] App URL configured:", !!process.env.NEXT_PUBLIC_APP_URL);
+    console.log("[OAuth Init] Redirect URL:", redirectTo);
+    
+    // Verify Supabase project URL matches expected format
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl && !supabaseUrl.includes("cwdfqloiodoburllwpqe")) {
+      console.warn("[OAuth Init] WARNING: Supabase URL might be for different project!");
+      console.warn("[OAuth Init] Expected project ref: cwdfqloiodoburllwpqe");
+      console.warn("[OAuth Init] Actual URL:", supabaseUrl.substring(0, 50) + "...");
+    }
+
     const supabase = await createClient();
     
     if (!supabase) {
       console.error("[OAuth Init] Failed to create Supabase client");
       return NextResponse.redirect(
         new URL(
-          `/auth/login?error=${encodeURIComponent("Authentication service unavailable. Please check Supabase configuration.")}`,
+          `/auth/login?error=${encodeURIComponent("Authentication service unavailable. Please check Supabase configuration. Visit /api/debug/oauth-config for diagnostics.")}`,
           cleanAppUrl
         )
       );
     }
+
+    // Test Supabase connection
+    try {
+      const { error: testError } = await supabase.auth.getUser();
+      if (testError && !testError.message.includes("not authenticated")) {
+        console.warn("[OAuth Init] Supabase connection test warning:", testError.message);
+      }
+    } catch (testErr: any) {
+      console.warn("[OAuth Init] Supabase connection test failed:", testErr.message);
+    }
+    
+    console.log("[OAuth Init] ============================");
 
     // This route initiates Twitter OAuth - users don't need to be authenticated yet
     // Try "twitter" first, then fallback to "x" if it fails (for OAuth 2.0)
@@ -97,19 +124,46 @@ export async function GET(request: NextRequest) {
       console.error("[OAuth Init] Error Name:", error.name);
       console.error("[OAuth Init] Error Object:", JSON.stringify(error, null, 2));
       console.error("[OAuth Init] Redirect URL Used:", redirectTo);
+      console.error("[OAuth Init] Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 50));
       console.error("[OAuth Init] =================================");
       
-      // Provide specific error messages based on error type
+      // Categorize error type
+      let errorCategory = "unknown";
       let errorMessage = error.message || "Unknown error";
+      const fixSteps: string[] = [];
       
-      if (error.message?.includes("provider is not enabled") || error.status === 400) {
-        errorMessage = `Twitter provider is not enabled or redirect URL "${redirectTo}" is not whitelisted in Supabase. Please check: 1) "X / Twitter (OAuth 2.0)" is enabled (not deprecated), 2) Redirect URL "${redirectTo}" is added to allowed redirect URLs in Supabase Auth settings, 3) Site URL is configured in Supabase (Auth → URL Configuration → Site URL should be "${cleanAppUrl}").`;
-      } else if (error.message?.includes("redirect")) {
-        errorMessage = `Redirect URL error: "${redirectTo}" - Make sure this URL is added to Supabase redirect URLs whitelist and Site URL is configured.`;
+      if (error.message?.includes("provider is not enabled") || 
+          error.message?.includes("Unsupported provider") ||
+          (error.status === 400 && error.message?.includes("provider"))) {
+        errorCategory = "provider_not_enabled";
+        errorMessage = `Twitter provider is not enabled in Supabase.`;
+        fixSteps.push(`1. Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/providers`);
+        fixSteps.push(`2. Click "X / Twitter (OAuth 2.0)" (NOT "Twitter (Deprecated)")`);
+        fixSteps.push(`3. Toggle it ON (should show green "Enabled")`);
+        fixSteps.push(`4. Enter Client ID: cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ`);
+        fixSteps.push(`5. Enter Client Secret: HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz`);
+        fixSteps.push(`6. Click "Save" and wait 60 seconds`);
+        fixSteps.push(`7. Make sure "Twitter (Deprecated)" is DISABLED`);
+      } else if (error.message?.includes("redirect") || error.status === 400) {
+        errorCategory = "redirect_url_error";
+        errorMessage = `Redirect URL "${redirectTo}" is not whitelisted or Site URL not configured.`;
+        fixSteps.push(`1. Go to: https://app.supabase.com/project/cwdfqloiodoburllwpqe/auth/url-configuration`);
+        fixSteps.push(`2. Set Site URL to: ${cleanAppUrl}`);
+        fixSteps.push(`3. Add Redirect URL: ${redirectTo}`);
+        fixSteps.push(`4. Click "Save" and wait 60 seconds`);
+      } else if (error.status === 400) {
+        errorCategory = "configuration_error";
+        errorMessage = `OAuth configuration error (HTTP 400).`;
+        fixSteps.push(`1. Check diagnostic endpoint: ${cleanAppUrl}/api/debug/oauth-config`);
+        fixSteps.push(`2. Verify "X / Twitter (OAuth 2.0)" is enabled in Supabase`);
+        fixSteps.push(`3. Verify Site URL is set to: ${cleanAppUrl}`);
+        fixSteps.push(`4. Verify Redirect URL "${redirectTo}" is whitelisted`);
       }
       
-      // Ensure error message is properly encoded and not too long for URL
-      const encodedError = encodeURIComponent(`OAuth Error: ${errorMessage}`);
+      const fullErrorMessage = `${errorMessage}\n\nFix Steps:\n${fixSteps.join('\n')}\n\nFor diagnostics, visit: ${cleanAppUrl}/api/debug/oauth-config`;
+      
+      // Ensure error message is properly encoded
+      const encodedError = encodeURIComponent(fullErrorMessage);
       
       // Redirect to login page with detailed error message
       return NextResponse.redirect(
