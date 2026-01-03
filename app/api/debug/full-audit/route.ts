@@ -85,21 +85,39 @@ export async function GET(request: NextRequest) {
 
       if (supabase) {
         // Test connection
+        // Note: "Auth session missing" is EXPECTED and NORMAL - we're testing connection, not authenticating
         try {
           const { data: userData, error: userError } = await supabase.auth.getUser();
+          const isExpectedError = userError?.message.includes("not authenticated") || 
+                                  userError?.message.includes("Auth session missing");
+          
           audit.checks.supabase.connectionTest = {
-            success: !userError || userError.message.includes("not authenticated"),
+            success: !userError || isExpectedError,
             error: userError?.message || null,
-            note: userError?.message.includes("not authenticated")
-              ? "Connection OK (user not authenticated is expected)"
+            note: isExpectedError
+              ? "Connection OK - 'Auth session missing' is EXPECTED (we're not authenticated, just testing connection)"
               : null,
           };
+          
+          // "Auth session missing" is not an error - it means connection works but no user is logged in
+          if (userError?.message.includes("Auth session missing")) {
+            audit.warnings.push("'Auth session missing' is normal - connection test doesn't require authentication");
+          }
         } catch (connError: any) {
-          audit.checks.supabase.connectionTest = {
-            success: false,
-            error: connError.message,
-          };
-          audit.errors.push(`Supabase connection test failed: ${connError.message}`);
+          // Only report as error if it's NOT "Auth session missing"
+          if (!connError.message?.includes("Auth session missing")) {
+            audit.checks.supabase.connectionTest = {
+              success: false,
+              error: connError.message,
+            };
+            audit.errors.push(`Supabase connection test failed: ${connError.message}`);
+          } else {
+            audit.checks.supabase.connectionTest = {
+              success: true,
+              error: connError.message,
+              note: "Connection OK - 'Auth session missing' is EXPECTED",
+            };
+          }
         }
       } else {
         audit.errors.push("Failed to create Supabase client");
@@ -225,20 +243,16 @@ export async function GET(request: NextRequest) {
     // ===== CHECK 4: Twitter Credentials Format =====
     audit.checks.twitter = {
       expectedClientId: "cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ",
-      expectedClientSecret: "Tqt-M-fmir5A-HxUg-XTFoDTC0TEqbCsaaHgeCPe3XwqFv3eDJ",
-      note: "These should be entered in Supabase Dashboard → Auth → Providers → X / Twitter (OAuth 2.0)",
+      expectedClientSecret: "***CHECK_SUPABASE_DASHBOARD***",
+      note: "Client Secret should be entered in Supabase Dashboard → Auth → Providers → X / Twitter (OAuth 2.0). Never store secrets in code!",
       callbackUrl: "https://cwdfqloiodoburllwpqe.supabase.co/auth/v1/callback",
       note2: "This callback URL should be configured in Twitter Developer Portal",
+      securityWarning: "⚠️ SECURITY: Secrets should NEVER be hardcoded in source code. They should only be in Supabase Dashboard and environment variables.",
       commonTypos: {
         clientId: {
           wrong: "cDhaU2UzbXpFWGpybjINMEM4Mno6MTpjaQ",
           correct: "cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ",
           issue: "Has 'INMEM' (capital I) instead of 'lNMEM' (lowercase l)",
-        },
-        clientSecret: {
-          old: "HZjam0f3y3ip0UGC_4OPISGi1-d18v0T62ggqnGIsTRiYLaRVz",
-          new: "Tqt-M-fmir5A-HxUg-XTFoDTC0TEqbCsaaHgeCPe3XwqFv3eDJ",
-          note: "Client Secret was regenerated - make sure new value is in Supabase",
         },
       },
       whereToGet: "Twitter Developer Portal → Your App → Keys and tokens → OAuth 2.0 Client ID and Secret",
