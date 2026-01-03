@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
     // ===== CHECK 4: Twitter Credentials Format =====
     audit.checks.twitter = {
       expectedClientId: "cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ",
-      expectedClientSecret: "HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz",
+      expectedClientSecret: "Tqt-M-fmir5A-HxUg-XTFoDTC0TEqbCsaaHgeCPe3XwqFv3eDJ",
       note: "These should be entered in Supabase Dashboard → Auth → Providers → X / Twitter (OAuth 2.0)",
       callbackUrl: "https://cwdfqloiodoburllwpqe.supabase.co/auth/v1/callback",
       note2: "This callback URL should be configured in Twitter Developer Portal",
@@ -236,13 +236,14 @@ export async function GET(request: NextRequest) {
           issue: "Has 'INMEM' (capital I) instead of 'lNMEM' (lowercase l)",
         },
         clientSecret: {
-          wrong: "HZjam0f3y3ip0UGC_4OPISGi1-d18v0T62ggqnGIsTRiYLaRVz",
-          correct: "HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz",
-          issue: "Has 'OPIS' instead of '4OPlS' (missing number 4 and lowercase l)",
+          old: "HZjam0f3y3ip0UGC_4OPISGi1-d18v0T62ggqnGIsTRiYLaRVz",
+          new: "Tqt-M-fmir5A-HxUg-XTFoDTC0TEqbCsaaHgeCPe3XwqFv3eDJ",
+          note: "Client Secret was regenerated - make sure new value is in Supabase",
         },
       },
       whereToGet: "Twitter Developer Portal → Your App → Keys and tokens → OAuth 2.0 Client ID and Secret",
       canChange: "YES - Can regenerate in Twitter Developer Portal, but must update in Supabase and Vercel if changed",
+      mcpNote: "MCP connection is for Cursor IDE database access - NOT related to OAuth configuration",
     };
 
     // ===== FINAL STATUS =====
