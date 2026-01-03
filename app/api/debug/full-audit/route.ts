@@ -180,7 +180,11 @@ export async function GET(request: NextRequest) {
                       errorJson.msg?.includes("provider is not enabled")
                     ) {
                       audit.errors.push("🔴 CRITICAL: Backend says provider is not enabled (UI vs backend mismatch)");
-                      audit.recommendations.push("🔴 NUCLEAR FIX: Disable provider → Wait 60s → Re-enable → Re-enter credentials → Wait 120s");
+                      audit.recommendations.push("🔴 MOST LIKELY CAUSE: Credential typos in Supabase");
+                      audit.recommendations.push("🔴 CHECK: Client ID has 'lNMEM' (lowercase l) NOT 'INMEM' (capital I)");
+                      audit.recommendations.push("🔴 CHECK: Client Secret has '4OPlS' (number 4, lowercase l) NOT 'OPIS'");
+                      audit.recommendations.push("🔴 FIX: Copy-paste exact values from this audit (never type manually)");
+                      audit.recommendations.push("🔴 NUCLEAR FIX: Delete all text → Copy-paste correct values → Save → Wait 120s");
                     }
                   } catch {
                     audit.checks.oauth.authorizeUrlTest.errorText = errorText.substring(0, 200);
@@ -225,6 +229,20 @@ export async function GET(request: NextRequest) {
       note: "These should be entered in Supabase Dashboard → Auth → Providers → X / Twitter (OAuth 2.0)",
       callbackUrl: "https://cwdfqloiodoburllwpqe.supabase.co/auth/v1/callback",
       note2: "This callback URL should be configured in Twitter Developer Portal",
+      commonTypos: {
+        clientId: {
+          wrong: "cDhaU2UzbXpFWGpybjINMEM4Mno6MTpjaQ",
+          correct: "cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ",
+          issue: "Has 'INMEM' (capital I) instead of 'lNMEM' (lowercase l)",
+        },
+        clientSecret: {
+          wrong: "HZjam0f3y3ip0UGC_4OPISGi1-d18v0T62ggqnGIsTRiYLaRVz",
+          correct: "HZjam0f3y3ip0UGC_4OPlSGi1-d18v0T62ggqnGIsTRiYLaRVz",
+          issue: "Has 'OPIS' instead of '4OPlS' (missing number 4 and lowercase l)",
+        },
+      },
+      whereToGet: "Twitter Developer Portal → Your App → Keys and tokens → OAuth 2.0 Client ID and Secret",
+      canChange: "YES - Can regenerate in Twitter Developer Portal, but must update in Supabase and Vercel if changed",
     };
 
     // ===== FINAL STATUS =====
