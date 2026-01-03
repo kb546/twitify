@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { syncAnalytics } from "@/lib/jobs/analytics-syncer";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST() {
   try {
     await syncAnalytics();

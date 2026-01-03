@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getUserNotifications } from "@/lib/notifications/in-app";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const { createClient } = await import("@/lib/supabase/server");

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { generateMultipleSuggestions } from "@/lib/ai/content-generator";
 import { canUseAISuggestions } from "@/lib/stripe/feature-gating";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
