@@ -1,13 +1,23 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not set");
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function getAnthropicClient() {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error("ANTHROPIC_API_KEY is not set");
+  }
+  return new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  });
+}
 
 interface ContentGenerationOptions {
   trendingTopics?: string[];
@@ -49,6 +59,7 @@ Return a JSON object with:
 
   try {
     // Try OpenAI first
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: "gpt-4-turbo-preview",
       messages: [
@@ -77,6 +88,7 @@ Return a JSON object with:
     
     // Fallback to Anthropic
     try {
+      const anthropic = getAnthropicClient();
       const message = await anthropic.messages.create({
         model: "claude-3-opus-20240229",
         max_tokens: 1024,

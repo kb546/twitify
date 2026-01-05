@@ -1,4 +1,4 @@
-import { stripe } from "./client";
+import { getStripeClient } from "./client";
 import { createClient } from "@/lib/supabase/server";
 
 export const PLANS = {
@@ -61,6 +61,7 @@ export async function createCheckoutSession(
 
   if (!customerId) {
     const { data: user } = await supabase.auth.getUser();
+    const stripe = getStripeClient();
     const customer = await stripe.customers.create({
       metadata: {
         userId,
@@ -75,6 +76,7 @@ export async function createCheckoutSession(
       .eq("user_id", userId);
   }
 
+  const stripe = getStripeClient();
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { postScheduledTweets } from "@/lib/jobs/tweet-poster";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;

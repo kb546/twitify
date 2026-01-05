@@ -1,0 +1,11 @@
+# GitGuardian Configuration
+# This helps prevent secrets from being committed
+
+# Patterns to ignore (if needed)
+# secrets:
+#   - name: "Some Pattern"
+#     pattern: "regex_pattern"
+
+# Note: GitGuardian scans automatically
+# This file documents that we're aware of security scanning
+
