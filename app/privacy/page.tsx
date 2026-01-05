@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900">1. Introduction</h2>
             <p>
-              Welcome to Twitify ("we," "our," or "us"), operated by <strong>Twitify By Bill</strong>. 
+              Welcome to Twitify (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;), operated by <strong>Twitify By Bill</strong>. 
               We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, 
               disclose, and safeguard your information when you use our web application located at 
               twitify.tech and our services.
@@ -73,8 +73,8 @@ export default function PrivacyPolicy() {
               account and all associated data at any time by contacting us at <strong>support@twitify.tech</strong>.
             </p>
             <p className="mt-2">
-              You can also revoke Twitify's access to your X account at any time through your 
-              X account's security settings (Apps and Sessions).
+              You can also revoke Twitify&apos;s access to your X account at any time through your 
+              X account&apos;s security settings (Apps and Sessions).
             </p>
           </section>
 

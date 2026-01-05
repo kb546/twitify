@@ -15,7 +15,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900">1. Agreement to Terms</h2>
             <p>
-              By accessing or using Twitify ("the Service"), operated by <strong>Twitify By Bill</strong>, 
+              By accessing or using Twitify (&quot;the Service&quot;), operated by <strong>Twitify By Bill</strong>, 
               you agree to be bound by these Terms of Service. If you do not agree to these terms, 
               please do not use the Service.
             </p>
@@ -34,7 +34,7 @@ export default function TermsOfService() {
             <h2 className="text-xl font-semibold text-gray-900">3. X (Twitter) Integration</h2>
             <p>
               Twitify interacts with your X account via the X API. By using the Service, you also 
-              agree to abide by X's Terms of Service and Developer Agreement. We are not responsible 
+              agree to abide by X&apos;s Terms of Service and Developer Agreement. We are not responsible 
               for any actions taken by X against your account, including suspension or termination, 
               resulting from your use of Twitify.
             </p>
