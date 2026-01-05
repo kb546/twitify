@@ -47,87 +47,85 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(result, { status: 200 });
       }
 
-      // STEP 3: Call signInWithOAuth
-      const redirectUrl = `${result.step1_env.appUrl.replace(/\/$/, "")}/auth/callback`;
-      
-      result.step3_oauth_call = {
-        redirectUrl,
-        provider: "twitter",
-      };
+    // STEP 3: Call signInWithOAuth for multiple provider names
+    const redirectUrl = `${result.step1_env.appUrl.replace(/\/$/, "")}/auth/callback`;
+    const providersToTest = ["twitter", "x", "twitter_oauth2"];
+    result.step3_oauth_tests = {};
 
-      const oauthResult = await supabase.auth.signInWithOAuth({
-        provider: "twitter",
-        options: {
-          redirectTo: redirectUrl,
-        },
-      });
-
-      if (oauthResult.error) {
-        result.step3_oauth_call.error = {
-          message: oauthResult.error.message,
-          status: oauthResult.error.status,
-          name: oauthResult.error.name,
-        };
-        result.conclusion = `OAuth call failed: ${oauthResult.error.message}`;
-        return NextResponse.json(result, { status: 200 });
-      }
-
-      if (!oauthResult.data?.url) {
-        result.step3_oauth_call.error = "No URL returned";
-        result.conclusion = "OAuth call succeeded but no URL returned";
-        return NextResponse.json(result, { status: 200 });
-      }
-
-      result.step3_oauth_call.success = true;
-      result.step3_oauth_call.url = oauthResult.data.url.substring(0, 200) + "...";
-
-      // STEP 4: Test the authorize URL
+    for (const provider of providersToTest) {
       try {
-        const authorizeResponse = await fetch(oauthResult.data.url, {
-          method: "GET",
-          redirect: "manual",
-          signal: AbortSignal.timeout(10000),
+        const oauthResult = await supabase.auth.signInWithOAuth({
+          provider: provider as any,
+          options: {
+            redirectTo: redirectUrl,
+          },
         });
 
-        result.step4_authorize_test = {
-          status: authorizeResponse.status,
-          headers: {
-            location: authorizeResponse.headers.get("location")?.substring(0, 100),
-            contentType: authorizeResponse.headers.get("content-type"),
-          },
-        };
+        if (oauthResult.error) {
+          result.step3_oauth_tests[provider] = {
+            success: false,
+            error: oauthResult.error.message,
+            status: oauthResult.error.status,
+          };
+        } else if (oauthResult.data?.url) {
+          result.step3_oauth_tests[provider] = {
+            success: true,
+            url: oauthResult.data.url.substring(0, 150) + "...",
+          };
 
-        if (authorizeResponse.status >= 400) {
-          const errorText = await authorizeResponse.text();
+          // STEP 4: Test the authorize URL for the successful provider
           try {
-            const errorJson = JSON.parse(errorText);
-            result.step4_authorize_test.error = errorJson;
-            
-            if (errorJson.msg?.includes("provider is not enabled")) {
-              result.conclusion = "ROOT CAUSE: Supabase backend says provider is not enabled. This means credentials in Supabase Dashboard are incorrect or provider configuration is not synced to backend.";
-            } else {
-              result.conclusion = `Authorize endpoint returned error: ${errorJson.msg || errorJson.error_code}`;
+            const authorizeResponse = await fetch(oauthResult.data.url, {
+              method: "GET",
+              redirect: "manual",
+              signal: AbortSignal.timeout(10000),
+            });
+
+            result.step3_oauth_tests[provider].authorizeTest = {
+              status: authorizeResponse.status,
+            };
+
+            if (authorizeResponse.status >= 400) {
+              const errorText = await authorizeResponse.text();
+              try {
+                const errorJson = JSON.parse(errorText);
+                result.step3_oauth_tests[provider].authorizeTest.error = errorJson;
+              } catch {
+                result.step3_oauth_tests[provider].authorizeTest.errorText = errorText.substring(0, 200);
+              }
+            } else if (authorizeResponse.status >= 300 && authorizeResponse.status < 400) {
+              const location = authorizeResponse.headers.get("location");
+              result.step3_oauth_tests[provider].authorizeTest.redirectsTo = location?.substring(0, 100);
             }
-          } catch {
-            result.step4_authorize_test.errorText = errorText.substring(0, 300);
-            result.conclusion = `Authorize endpoint returned error (status ${authorizeResponse.status})`;
+          } catch (testError: any) {
+            result.step3_oauth_tests[provider].authorizeTest = {
+              error: testError.message,
+            };
           }
-        } else if (authorizeResponse.status >= 300 && authorizeResponse.status < 400) {
-          const location = authorizeResponse.headers.get("location");
-          if (location && (location.includes("twitter.com") || location.includes("x.com"))) {
-            result.conclusion = "SUCCESS: OAuth is working correctly - redirects to Twitter";
-          } else {
-            result.conclusion = `Authorize redirects but not to Twitter: ${location?.substring(0, 100)}`;
-          }
-        } else {
-          result.conclusion = `Authorize returned status ${authorizeResponse.status} (unexpected)`;
         }
-      } catch (testError: any) {
-        result.step4_authorize_test = {
-          error: testError.message,
+      } catch (e: any) {
+        result.step3_oauth_tests[provider] = {
+          success: false,
+          error: e.message,
         };
-        result.conclusion = `Failed to test authorize URL: ${testError.message}`;
       }
+    }
+
+    // Determine conclusion based on tests
+    const successfulProvider = Object.keys(result.step3_oauth_tests).find(
+      p => result.step3_oauth_tests[p].success && result.step3_oauth_tests[p].authorizeTest?.status < 400
+    );
+
+    if (successfulProvider) {
+      result.conclusion = `SUCCESS: Provider '${successfulProvider}' is working and authorized!`;
+    } else {
+      const anySuccessInCall = Object.keys(result.step3_oauth_tests).find(p => result.step3_oauth_tests[p].success);
+      if (anySuccessInCall) {
+        result.conclusion = "ROOT CAUSE: Supabase returns OAuth URLs but the backend rejects all of them with 'provider not enabled'. This confirms a sync issue between UI and Backend in Supabase Dashboard.";
+      } else {
+        result.conclusion = "CRITICAL: All provider name variations failed to even generate an OAuth URL. Check your Supabase configuration.";
+      }
+    }
 
     } catch (clientError: any) {
       result.step2_supabase_client = {
