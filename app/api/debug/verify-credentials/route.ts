@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const verification: any = {
       timestamp: new Date().toISOString(),
       credentials: {
-        expectedClientId: "cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ",
+        expectedClientId: "cDhaU2UzbXpFWGpybjlNEM4Mno6MTpjaQ",
         expectedClientSecret: "***CHECK_SUPABASE_DASHBOARD***",
         note: "Client Secret should be entered in Supabase Dashboard → Auth → Providers → X / Twitter (OAuth 2.0). Never store secrets in code!",
         securityNote: "Secrets should NEVER be hardcoded in source code. They should only be in Supabase Dashboard and environment variables.",
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
                   ) {
                     verification.findings.push("🔴 CRITICAL: Backend says provider is not enabled");
                     verification.recommendations.push("🔴 This means credentials in Supabase are incorrect or not saved");
-                    verification.recommendations.push("🔴 Verify in Supabase: Client ID = cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ");
+                    verification.recommendations.push("🔴 Verify in Supabase: Client ID = cDhaU2UzbXpFWGpybjlNEM4Mno6MTpjaQ");
                     verification.recommendations.push("🔴 Verify in Supabase: Client Secret matches what's in Twitter Developer Portal");
                     verification.recommendations.push("🔴 After updating, wait 120 seconds before testing");
                   } else {

@@ -243,7 +243,7 @@ export async function GET(request: NextRequest) {
 
     // ===== CHECK 4: Twitter Credentials Format =====
     audit.checks.twitter = {
-      expectedClientId: "cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ",
+      expectedClientId: "cDhaU2UzbXpFWGpybjlNEM4Mno6MTpjaQ",
       expectedClientSecret: "***CHECK_SUPABASE_DASHBOARD***",
       note: "Client Secret should be entered in Supabase Dashboard → Auth → Providers → X / Twitter (OAuth 2.0). Never store secrets in code!",
       callbackUrl: "https://cwdfqloiodoburllwpqe.supabase.co/auth/v1/callback",
@@ -252,8 +252,8 @@ export async function GET(request: NextRequest) {
       commonTypos: {
         clientId: {
           wrong: "cDhaU2UzbXpFWGpybjINMEM4Mno6MTpjaQ",
-          correct: "cDhaU2UzbXpFWGpybjlNMEM4Mno6MTpjaQ",
-          issue: "Has 'INMEM' (capital I) instead of 'lNMEM' (lowercase l)",
+          correct: "cDhaU2UzbXpFWGpybjlNEM4Mno6MTpjaQ",
+          issue: "Previous expected value had an extra 'M'",
         },
       },
       whereToGet: "Twitter Developer Portal → Your App → Keys and tokens → OAuth 2.0 Client ID and Secret",
