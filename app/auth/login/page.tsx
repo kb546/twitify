@@ -92,15 +92,21 @@ function LoginForm() {
               <p className="text-sm text-red-600 mt-1 whitespace-pre-wrap break-words">{error}</p>
             </div>
           )}
-          <Button
-            onClick={handleTwitterLogin}
-            disabled={loading}
-            className="w-full"
-            size="lg"
-          >
-            {loading ? "Connecting..." : "Sign in with Twitter"}
-          </Button>
-          {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_APP_URL) && (
+              <Button
+                onClick={handleTwitterLogin}
+                disabled={loading}
+                className="w-full"
+                size="lg"
+              >
+                {loading ? "Connecting..." : "Sign in with Twitter"}
+              </Button>
+
+              <div className="flex justify-center space-x-4 text-xs text-gray-500 mt-4">
+                <a href="/privacy" className="hover:underline">Privacy Policy</a>
+                <a href="/terms" className="hover:underline">Terms of Service</a>
+              </div>
+
+              {(process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_APP_URL) && (
             <div className="mt-4 p-3 bg-gray-50 rounded-md text-xs text-gray-600">
               <p><strong>Debug Info:</strong></p>
               <p>NEXT_PUBLIC_APP_URL: {process.env.NEXT_PUBLIC_APP_URL || 'Not set'}</p>
