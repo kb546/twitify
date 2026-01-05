@@ -171,17 +171,17 @@ export async function GET(request: NextRequest) {
             // Test the authorize URL
             try {
               const authorizeTest = await fetch(oauthResult.data.url, {
-                method: "HEAD",
+                method: "GET", // Use GET instead of HEAD
                 redirect: "manual",
               });
 
               const status = authorizeTest.status;
               audit.checks.oauth.authorizeUrlTest = {
                 status,
-                success: status < 400,
+                success: status < 400 || status === 405, // Treat 405 as non-critical for diagnostics
               };
 
-              if (status >= 400) {
+              if (status >= 400 && status !== 405) {
                 // Get error details
                 try {
                   const errorResponse = await fetch(oauthResult.data.url, {

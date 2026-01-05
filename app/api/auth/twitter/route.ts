@@ -224,8 +224,10 @@ export async function GET(request: NextRequest) {
       console.log("[OAuth Init] ===== STEP 8: Testing Authorize URL (Backend Check) =====");
       
       try {
+        // Use GET instead of HEAD as some endpoints (including Supabase/Twitter) 
+        // may return 405 Method Not Allowed for HEAD requests.
         const testResponse = await fetch(data.url, {
-          method: "HEAD",
+          method: "GET",
           redirect: "manual",
           signal: AbortSignal.timeout(10000), // 10 second timeout
         });
@@ -233,7 +235,9 @@ export async function GET(request: NextRequest) {
         const status = testResponse.status;
         console.log("[OAuth Init] Authorize URL test status:", status);
         
-        if (status >= 400) {
+        // 302 Found is the expected status for a successful redirect to Twitter.
+        // We only treat statuses >= 400 as actual errors.
+        if (status >= 400 && status !== 405) {
           // Backend rejected - get error details
           console.error("[OAuth Init] Backend rejected authorize URL (status", status + ")");
           

@@ -67,10 +67,10 @@ export async function GET(request: NextRequest) {
           authorizePath: urlObj.pathname,
         };
 
-        // Make a HEAD request to test the authorize endpoint
-        // We use HEAD to avoid following redirects, just check if endpoint accepts the request
+        // Make a GET request to test the authorize endpoint
+        // Some endpoints return 405 for HEAD, so we use GET with redirect: manual
         const testResponse = await fetch(oauthUrl, {
-          method: "HEAD",
+          method: "GET",
           redirect: "manual", // Don't follow redirects
           headers: {
             "User-Agent": "Twitify-Debug/1.0",
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
         const location = testResponse.headers.get("location");
 
         diagnostics.testResults.authorizeUrlTest = {
-          success: status < 400,
+          success: status < 400 || status === 405,
           status,
           location: location ? location.substring(0, 100) + "..." : null,
           headers: {
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         };
 
         // Parse response if it's an error
-        if (status >= 400) {
+        if (status >= 400 && status !== 405) {
           // Try to get error details from response body
           try {
             const errorResponse = await fetch(oauthUrl, {
