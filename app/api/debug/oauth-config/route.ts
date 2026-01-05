@@ -50,14 +50,14 @@ export async function GET(request: NextRequest) {
         const redirectUrl = `${appUrl}/auth/callback`;
         diagnostics.oauth.redirectUrl = redirectUrl;
         
-        // Try to test OAuth (this will fail if provider not enabled, but we can catch the error)
-        try {
-          const testResult = await supabase.auth.signInWithOAuth({
-            provider: "twitter",
-            options: {
-              redirectTo: redirectUrl,
-            },
-          });
+          // Try to test OAuth (this will fail if provider not enabled, but we can catch the error)
+          try {
+            const testResult = await supabase.auth.signInWithOAuth({
+              provider: "x",
+              options: {
+                redirectTo: redirectUrl,
+              },
+            });
           
           if (testResult.error) {
             diagnostics.oauth.providerTest = {

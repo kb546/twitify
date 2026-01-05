@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       // Test 1: Can we generate OAuth URL?
       try {
         const oauthResult = await supabase.auth.signInWithOAuth({
-          provider: "twitter",
+          provider: "x",
           options: {
             redirectTo: redirectUrl,
           },
