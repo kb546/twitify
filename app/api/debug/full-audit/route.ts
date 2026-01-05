@@ -143,8 +143,9 @@ export async function GET(request: NextRequest) {
       if (supabase) {
         // Test OAuth URL generation
         try {
+          console.log("[Full Audit] Testing provider: x (for Twitter OAuth 2.0)");
           const oauthResult = await supabase.auth.signInWithOAuth({
-            provider: "twitter",
+            provider: "x",
             options: {
               redirectTo: redirectUrl,
             },
