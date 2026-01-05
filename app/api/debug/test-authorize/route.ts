@@ -21,8 +21,9 @@ export async function GET(request: NextRequest) {
     // Step 1: Generate OAuth URL
     try {
       const supabase = await createClient();
+      console.log("[Test Authorize] Testing provider: x");
       const oauthResult = await supabase.auth.signInWithOAuth({
-        provider: "twitter",
+        provider: "x",
         options: {
           redirectTo: redirectUrl,
         },

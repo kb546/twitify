@@ -112,15 +112,15 @@ export async function GET(request: NextRequest) {
 
     // ===== STEP 4: Generate OAuth URL =====
     console.log("[OAuth Init] ===== STEP 4: Generating OAuth URL =====");
-    console.log("[OAuth Init] Provider: twitter (OAuth 2.0)");
+    console.log("[OAuth Init] Provider: x (OAuth 2.0)");
     console.log("[OAuth Init] Redirect URL:", redirectTo);
     
     let oauthResult;
     try {
-      // CRITICAL: For OAuth 2.0, Supabase uses "twitter" as provider name
-      // Note: Even though it's called "X / Twitter (OAuth 2.0)" in UI, the provider name is still "twitter"
+      // BREAKTHROUGH: For the new X / Twitter (OAuth 2.0) provider, 
+      // Supabase requires "x" as the provider name, NOT "twitter".
       oauthResult = await supabase.auth.signInWithOAuth({
-        provider: "twitter",
+        provider: "x",
         options: {
           redirectTo,
           queryParams: {
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
     // ===== STEP 5: Handle OAuth Errors =====
     if (error) {
       console.error("[OAuth Init] ===== STEP 5: OAuth Error Detected =====");
-      console.error("[OAuth Init] Provider: twitter");
+      console.error("[OAuth Init] Provider: x");
       console.error("[OAuth Init] Error Message:", error.message);
       console.error("[OAuth Init] Error Status:", error.status);
       console.error("[OAuth Init] Error Name:", error.name);
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
     // ===== STEP 6: Validate OAuth URL Was Returned =====
     if (!data?.url) {
       console.error("[OAuth Init] ===== STEP 6: No OAuth URL Returned =====");
-      console.error("[OAuth Init] Provider: twitter");
+      console.error("[OAuth Init] Provider: x");
       console.error("[OAuth Init] Redirect URL:", redirectTo);
       console.error("[OAuth Init] This usually means Supabase rejected the request");
       
